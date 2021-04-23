@@ -35,6 +35,7 @@ function defineReactive(data, key, value) {
             //收集依赖
             if(Dep.target){ //如果这个属性是在模版中获取的
                 dep.append()
+                console.log(1)
             }
             return value
         }
