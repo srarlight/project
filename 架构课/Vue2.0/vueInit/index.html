@@ -2,31 +2,47 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Title</title>
 </head>
 <body>
 <div id="app">
-
-    <span>我的名字是</span>
+    {{name}}
 </div>
-</body>
-</html>
 <script src="dist/vue.js"></script>
 <script type="module">
 
-    let app = new Vue({
-        el: '#app',
+    let vm = new Vue({
         data() {
             return {
                 name: 'zhangSan',
                 age: 19,
-                array: [
-                    "a", "b", {
-                        c: 36
-                    }
-                ]
+
             }
+        },
+        watch: {
+            name(newVal, oldVal) {
+                console.log(newVal, oldVal)
+            },
+            // name: [
+            //     function (newV, old) {
+            //         console.log(newV, old)
+            //     },
+            //     function (a, b) {
+            //         console.log(a, b)
+            //     }
+            // ]
         }
     })
-    app.$mount('#app');
+    vm.$mount('#app');
+    setTimeout(() => {
+
+        vm.name = '123';
+        vm.$nextTick(() => {
+            console.log(vm.$el)
+        })
+    }, 1000)
+
 </script>
+</body>
+</html>

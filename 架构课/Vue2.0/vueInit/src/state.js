@@ -1,59 +1,66 @@
-import {observe} from "./observer/index";
-function proxy(vm,key,source) {
-    Object.defineProperty(vm,key, {
+import { observe } from "./observer/index"; // node_resolve_plugin
+import { isFunction } from "./utils";
+import Watcher from "./observer/watcher";
+export function stateMixin(Vue){
+    Vue.prototype.$watch = function (vm,key,handler,options= {}){
+        options.user = true;
+        new Watcher(vm,key,handler,options)
+
+    }
+}
+function createWatch(vm,key,handler,options) {
+    return vm.$watch(vm,key,handler)
+}
+
+function initWatch(vm,watch) {
+    for (const watchKey in watch) {
+        let handler = watch[watchKey];
+        if(Array.isArray(handler)){
+            for (let i =0;i<handler.length;i++){
+                createWatch(vm,watchKey,handler[i])
+            }
+        }else {
+            createWatch(vm,watchKey,handler)
+        }
+    }
+}
+
+export function initState(vm) { // 状态的初始化
+    const opts = vm.$options;
+    if (opts.data) {
+        initData(vm);
+    }
+    // if(opts.computed){
+    //     initComputed();
+    // }
+    if(opts.watch){
+        initWatch(vm,opts.watch);
+    }
+}
+
+function proxy(vm,source,key){
+    Object.defineProperty(vm,key,{
         get(){
-            return vm[source][key]
+            return vm[source][key];
         },
-        set(newVal){
-            vm[source][key] = newVal;
+        set(newValue){
+            vm[source][key] = newValue
         }
     })
 }
-function initData(vm) {
-    let data = vm.$options.data;
-    vm._data = data  = typeof data === 'function'?data.call(vm):data;
-    //数据代理
-    //vm._data.xxx =>vm.xxx
-    for (const key in data) {
-        proxy(vm,key,'_data')
+function initData(vm) { //
+    let data = vm.$options.data; // vm.$el  vue 内部会对属性检测如果是以$开头 不会进行代理
+    // vue2中会将data中的所有数据 进行数据劫持 Object.defineProperty
+
+    // 这个时候 vm 和 data没有任何关系, 通过_data 进行关联
+
+
+    data = vm._data = isFunction(data) ? data.call(vm) : data;
+
+    // 用户去vm.xxx => vm._data.xxx
+    for(let key in data){ // vm.name = 'xxx'  vm._data.name = 'xxx'
+        proxy(vm,'_data',key); 
     }
-    observe(data)
-}
 
-function initProps(vm) {
-
-}
-
-function initMethods(vm) {
-
-}
-
-function initComputed(vm) {
-
-}
-
-function initWatch(vm) {
-
-}
-
-export function initState(vm){
-    console.log(vm)
-    const options = vm.$options;
-    // if(options.props){
-    //     initProps(vm)
-    // }
-    //
-    // if(options.methods){
-    //     initMethods(vm)
-    // }
-    if(options.data){
-        initData(vm)
-    }
-    // if(options.computed){
-    //     initComputed(vm)
-    //
-    // }
-    // if(options.watch){
-    //     initWatch(vm)
-    // }
+    observe(data);
 }
