@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>web-component</title>
+</head>
+<body>
+<sl-button type="primary">自定义按钮</sl-button>
+<templete id="btn">
+    <button class="sl-btn">
+        <slot>默认按钮</slot>
+    </button>
+</templete>
+</body>
+</html>
+<script>
+    class SlButton extends HTMLElement{
+        constructor() {
+            super();
+            console.log(this);
+            //创建一个影子
+            let shadow = this.attachShadow({ mode: 'open' });
+            let btnTmpl = document.getElementById('btn');
+            let cloneTemplate = btnTmpl.cloneNode(true);
+            let type  = {
+                "primary":{
+                    background: '#409eff',
+                    color:'yellow'
+                },
+                "default":{
+                    background: '#c8c9cc',
+                    color: 'white'
+                }
+            }
+            const style = document.createElement('style');
+            const btnType = this.getAttribute('type') || 'default';
+            style.innerHTML = `
+                .sl-btn {
+                    outline:none;
+                    border-radius:4px;
+                    border:none;
+                    background:var(--background-color,${type[btnType].background});
+                    color:var(--text-color,${type[btnType].color});
+                    padding:6px 20px;
+                }
+            `
+            shadow.appendChild(style)
+            shadow.appendChild(cloneTemplate)
+
+        }
+    }
+
+    window.customElements.define('sl-button',SlButton);
+</script>

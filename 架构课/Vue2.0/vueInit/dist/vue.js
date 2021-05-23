@@ -115,10 +115,10 @@
     }
 
     var root = null;
-    var stack = [];
+    var stack$1 = [];
 
     function start(tagName, attributes) {
-      var parent = stack[stack.length - 1];
+      var parent = stack$1[stack$1.length - 1];
       var element = createAstElement(tagName, attributes);
 
       if (!root) {
@@ -131,11 +131,11 @@
         parent.children.push(element);
       }
 
-      stack.push(element);
+      stack$1.push(element);
     }
 
     function end(tagName) {
-      var last = stack.pop();
+      var last = stack$1.pop();
 
       if (last.tag !== tagName) {
         throw new Error('标签有误');
@@ -144,7 +144,7 @@
 
     function chars(text) {
       text = text.replace(/\s/g, "");
-      var parent = stack[stack.length - 1];
+      var parent = stack$1[stack$1.length - 1];
 
       if (text) {
         parent.children.push({
@@ -283,6 +283,55 @@
       return Constructor;
     }
 
+    function _defineProperty(obj, key, value) {
+      if (key in obj) {
+        Object.defineProperty(obj, key, {
+          value: value,
+          enumerable: true,
+          configurable: true,
+          writable: true
+        });
+      } else {
+        obj[key] = value;
+      }
+
+      return obj;
+    }
+
+    function ownKeys(object, enumerableOnly) {
+      var keys = Object.keys(object);
+
+      if (Object.getOwnPropertySymbols) {
+        var symbols = Object.getOwnPropertySymbols(object);
+        if (enumerableOnly) symbols = symbols.filter(function (sym) {
+          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+        });
+        keys.push.apply(keys, symbols);
+      }
+
+      return keys;
+    }
+
+    function _objectSpread2(target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i] != null ? arguments[i] : {};
+
+        if (i % 2) {
+          ownKeys(Object(source), true).forEach(function (key) {
+            _defineProperty(target, key, source[key]);
+          });
+        } else if (Object.getOwnPropertyDescriptors) {
+          Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+        } else {
+          ownKeys(Object(source)).forEach(function (key) {
+            Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+          });
+        }
+      }
+
+      return target;
+    }
+
     var id$1 = 0;
 
     var Dep = /*#__PURE__*/function () {
@@ -321,11 +370,14 @@
 
     Dep.target = null; // 一份
 
+    var stack = [];
     function pushTarget(watcher) {
       Dep.target = watcher;
+      stack.push(watcher); // console.log(stack)
     }
     function popTarget() {
-      Dep.target = null;
+      stack.pop();
+      Dep.target = stack[stack.length - 1];
     }
 
     function isFunction(val) {
@@ -345,45 +397,75 @@
 
     var waiting = false;
 
-    function timer(flushCallbacks) {
-      var timerFn = function timerFn() {};
-
-      if (Promise) {
-        timerFn = function timerFn() {
-          Promise.resolve().then(flushCallbacks);
-        };
-      } else if (MutationObserver) {
-        var textNode = document.createTextNode(1);
-        var observe = new MutationObserver(flushCallbacks);
-        observe.observe(textNode, {
-          characterData: true
-        });
-
-        timerFn = function timerFn() {
-          textNode.textContent = 3;
-        }; // 微任务
-
-      } else if (setImmediate) {
-        timerFn = function timerFn() {
-          setImmediate(flushCallbacks);
-        };
-      } else {
-        timerFn = function timerFn() {
-          setTimeout(flushCallbacks);
-        };
-      }
-
-      timerFn();
-    } // 微任务是在页面渲染前执行 我取的是内存中的dom，不关心你渲染完毕没有
-
 
     function nextTick(cb) {
       callbacks.push(cb); // flushSchedulerQueue / userCallback
 
       if (!waiting) {
-        timer(flushCallbacks); // vue2 中考虑了兼容性问题 vue3 里面不在考虑兼容性问题
+        Promise.resolve().then(flushCallbacks); // vue2 中考虑了兼容性问题 vue3 里面不在考虑兼容性问题
 
         waiting = true;
+      }
+    } //{},{data:{a:1},beforeCreate}
+
+    var lifeCycleHooks = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed'];
+    var strategy = {}; // 存放策略
+
+    lifeCycleHooks.forEach(function (hook) {
+      return strategy[hook] = mergeHook;
+    });
+
+    function mergeHook(parentVal, childVal) {
+      if (childVal) {
+        if (parentVal) {
+          return parentVal.concat(childVal); //
+        } else {
+          return [childVal]; //第一次执行
+        }
+      } else {
+        return parentVal;
+      }
+    }
+
+    function mergeOptions(parent, child) {
+      var options = {};
+
+      for (var key in parent) {
+        mergeField(key);
+      }
+
+      for (var _key in child) {
+        if (parent.hasOwnProperty(_key)) {
+          continue;
+        }
+
+        mergeField(_key);
+      }
+
+      function mergeField(key) {
+        var parentVal = parent[key];
+        var childVal = child[key];
+
+        if (strategy[key]) {
+          options[key] = strategy[key](parentVal, childVal);
+        } else {
+          if (isObject(parentVal) && isObject(childVal)) {
+            options[key] = _objectSpread2(_objectSpread2({}, parentVal), childVal);
+          } else {
+            options[key] = childVal || parentVal;
+          }
+        }
+      }
+
+      return options;
+    }
+    function callHook(vm, hook) {
+      var handles = vm.$options[hook];
+
+      for (var i = 0; i < handles.length; i++) {
+        if (handles) {
+          handles[i].call(vm);
+        }
       }
     }
 
@@ -424,6 +506,9 @@
         this.vm = vm;
         this.exprOrFn = exprOrFn;
         this.cb = cb;
+        this.lazy = !!options.lazy;
+        this.dirty = !!options.lazy; //判断是否是计算属性
+
         this.user = !!options.user; //强制转换成boolean
 
         this.options = options;
@@ -446,8 +531,9 @@
         }
 
         this.deps = [];
-        this.depsId = new Set();
-        this.value = this.get(); // 默认初始化 要取值
+        this.depsId = new Set(); // this.value = this.get(); // 默认初始化 要取值
+
+        this.value = this.lazy ? undefined : this.get(); //调用get方法 会要渲染watcher执行
       }
 
       _createClass(Watcher, [{
@@ -462,7 +548,6 @@
 
           popTarget(); // Dep.target = null; 如果Dep.target有值说明这个变量在模板中使用了
 
-          console.log(value);
           return value;
         }
       }, {
@@ -470,7 +555,17 @@
         value: function update() {
           // vue中的更新操作是异步的
           // 每次更新时 this
-          queueWatcher(this); // 多次调用update 我希望先将watcher缓存下来，等一会一起更新
+          if (this.lazy) {
+            this.dirty = true;
+          } else {
+            queueWatcher(this); // 多次调用update 我希望先将watcher缓存下来，等一会一起更新
+          }
+        }
+      }, {
+        key: "evaluate",
+        value: function evaluate() {
+          this.value = this.get();
+          this.dirty = false;
         }
       }, {
         key: "run",
@@ -494,6 +589,15 @@
             this.depsId.add(id);
             this.deps.push(dep);
             dep.addSub(this);
+          }
+        }
+      }, {
+        key: "depend",
+        value: function depend() {
+          var i = this.deps.length;
+
+          while (i--) {
+            this.deps[i].depend();
           }
         }
       }]);
@@ -748,16 +852,63 @@
       }
     }
 
+    function createComputed(computedKey) {
+      return function computedGetter() {
+        var watcher = this._computedWatchers[computedKey];
+
+        if (watcher.dirty) {
+          watcher.evaluate();
+        }
+
+        if (Dep.target) {
+          watcher.addDep();
+        }
+
+        return watcher.value;
+      };
+    }
+
+    function defineComputed(vm, computedKey, userDef) {
+      var obj = {};
+
+      if (typeof userDef === 'function') {
+        obj.get = userDef;
+      } else {
+        obj.get = createComputed(computedKey);
+        obj.set = userDef.set;
+      }
+
+      console.log(obj);
+      Object.defineProperty(vm, computedKey, obj);
+    }
+
+    function initComputed(vm, computed) {
+      var watcher = vm._computedWatchers = {};
+
+      for (var computedKey in computed) {
+        var userDef = computed[computedKey]; //获取get
+
+        typeof userDef === 'function' ? userDef : userDef.get; // 创建watcher 每个属性都是一个watcher
+
+        watcher[computedKey] = new Watcher(vm, userDef, function () {}, {
+          lazy: true
+        }); //将computer 挂载到vm
+
+        defineComputed(vm, computedKey, userDef);
+      }
+    }
+
     function initState(vm) {
       // 状态的初始化
       var opts = vm.$options;
 
       if (opts.data) {
         initData(vm);
-      } // if(opts.computed){
-      //     initComputed();
-      // }
+      }
 
+      if (opts.computed) {
+        initComputed(vm, opts.computed);
+      }
 
       if (opts.watch) {
         initWatch(vm, opts.watch);
@@ -797,8 +948,10 @@
         // el,data
         var vm = this; // var that = this;
 
-        vm.$options = options; // 后面会对options进行扩展操作
-        // 对数据进行初始化 watch computed props data ...
+        vm.$options = mergeOptions(vm.constructor.options, options); // 后面会对options进行扩展操作
+
+        console.log(vm);
+        callHook(vm, 'beforeCreate'); // 对数据进行初始化 watch computed props data ...
 
         initState(vm); // vm.$options.data  数据劫持
 
@@ -883,6 +1036,17 @@
       };
     }
 
+    function initGlobalApi(Vue) {
+      Vue.options = {};
+
+      Vue.mixin = function (options) {
+        console.log(options);
+        this.options = mergeOptions(this.options, options);
+        console.log(this.options);
+        return this; //链式调用
+      };
+    }
+
     function Vue(options) {
       // options 为用户传入的选项
       this._init(options); // 初始化操作， 组件
@@ -896,6 +1060,7 @@
     lifecycleMixin(Vue); // _update
 
     stateMixin(Vue);
+    initGlobalApi(Vue);
     // $mount 找render方法  （template-> render函数  ast => codegen =>字符串）
     // render = with + new Function(codegen) 产生虚拟dom的方法 
     // 虚拟dom -> 真实dom 

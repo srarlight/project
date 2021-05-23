@@ -2,6 +2,7 @@ import { initMixin } from "./init";
 import { lifecycleMixin } from "./lifecycle";
 import { renderMixin } from "./render";
 import {stateMixin} from "./state";
+import {initGlobalApi} from "./initGloableApi";
 
 function Vue(options){
     // options 为用户传入的选项
@@ -12,7 +13,8 @@ function Vue(options){
 initMixin(Vue);
 renderMixin(Vue); // _render
 lifecycleMixin(Vue); // _update
-stateMixin(Vue)
+stateMixin(Vue);
+initGlobalApi(Vue);
 export default Vue;
 
 

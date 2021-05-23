@@ -7,11 +7,21 @@
 </head>
 <body>
 <div id="app">
-    {{name}}
+
 </div>
 <script src="dist/vue.js"></script>
 <script type="module">
+    Vue.mixin({
+        beforeCreate() {
+            console.log(1)
+        }
+    }),
+        Vue.mixin({
 
+            beforeCreate() {
+                console.log(1)
+            }
+        })
     let vm = new Vue({
         data() {
             return {
@@ -20,28 +30,13 @@
 
             }
         },
-        watch: {
-            name(newVal, oldVal) {
-                console.log(newVal, oldVal)
-            },
-            // name: [
-            //     function (newV, old) {
-            //         console.log(newV, old)
-            //     },
-            //     function (a, b) {
-            //         console.log(a, b)
-            //     }
-            // ]
+        beforeCreate() {
+            console.log(333)
         }
+
     })
     vm.$mount('#app');
-    setTimeout(() => {
 
-        vm.name = '123';
-        vm.$nextTick(() => {
-            console.log(vm.$el)
-        })
-    }, 1000)
 
 </script>
 </body>
