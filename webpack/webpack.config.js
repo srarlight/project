@@ -9,7 +9,7 @@ module.exports = (env, argv) => {
     const devMode = argv.mode !== 'production';
     const cssLoader = devMode ? 'style-loader' : MiniCssExtractPlugin.loader
     return {
-        entry: './src/index.js',
+        entry: './src/state.js',
         output: {
             filename: '[name].bundle.js',
             path: path.resolve(__dirname, 'dist') //返回绝对路径
